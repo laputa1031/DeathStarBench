@@ -82,6 +82,14 @@ service TextService {
   ) throws (1: ServiceException se)
 }
 
+service TranslateService {
+  string Translate (
+      1: i64 req_id,
+      2: string text,
+      3: map<string, string> carrier
+  ) throws (1: ServiceException se)
+}
+
 service UserService {
   void RegisterUser (
       1: i64 req_id,

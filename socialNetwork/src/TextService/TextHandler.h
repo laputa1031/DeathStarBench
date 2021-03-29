@@ -11,6 +11,7 @@
 #include "../../gen-cpp/ComposePostService.h"
 #include "../../gen-cpp/UserMentionService.h"
 #include "../../gen-cpp/UrlShortenService.h"
+#include "../../gen-cpp/TranslateService.h"
 #include "../logger.h"
 #include "../tracing.h"
 #include "../ClientPool.h"
@@ -23,7 +24,8 @@ class TextHandler : public TextServiceIf {
   TextHandler(
       ClientPool<ThriftClient<ComposePostServiceClient>> *,
       ClientPool<ThriftClient<UrlShortenServiceClient>> *,
-      ClientPool<ThriftClient<UserMentionServiceClient>> *);
+      ClientPool<ThriftClient<UserMentionServiceClient>> *,
+      ClientPool<ThriftClient<TranslateServiceClient>> *);
   ~TextHandler() override = default;
 
   void UploadText(int64_t, const std::string &,
@@ -32,15 +34,18 @@ class TextHandler : public TextServiceIf {
   ClientPool<ThriftClient<ComposePostServiceClient>> *_compose_client_pool;
   ClientPool<ThriftClient<UrlShortenServiceClient>> *_url_client_pool;
   ClientPool<ThriftClient<UserMentionServiceClient>> *_user_mention_client_pool;
+  ClientPool<ThriftClient<TranslateServiceClient>> *_translate_client_pool;
 };
 
 TextHandler::TextHandler(
     ClientPool<ThriftClient<ComposePostServiceClient>> *compose_client_pool,
     ClientPool<ThriftClient<UrlShortenServiceClient>> *url_client_pool,
-    ClientPool<ThriftClient<UserMentionServiceClient>> *user_mention_client_pool) {
+    ClientPool<ThriftClient<UserMentionServiceClient>> *user_mention_client_pool,
+    ClientPool<ThriftClient<TranslateServiceClient>> *translate_client_pool) {
   _compose_client_pool = compose_client_pool;
   _url_client_pool = url_client_pool;
   _user_mention_client_pool = user_mention_client_pool;
+  _translate_client_pool = translate_client_pool;
 }
 
 void TextHandler::UploadText(
@@ -62,12 +67,16 @@ void TextHandler::UploadText(
   std::smatch m;
   std::regex e("@[a-zA-Z0-9-_]+");
   auto s = text;
+  std::string removeMention = "";
+  std::string plainText = "";
   while (std::regex_search(s, m, e)){
     auto user_mention = m.str();
     user_mention = user_mention.substr(1, user_mention.length());
     user_mentions.emplace_back(user_mention);
     s = m.suffix().str();
+    removeMention += m.prefix().str();
   }
+  removeMention += s;
 
   std::vector<std::string> urls;
   e = "(http://|https://)([a-zA-Z0-9_!~*'().&=+$%-]+)";
@@ -77,6 +86,37 @@ void TextHandler::UploadText(
     urls.emplace_back(url);
     s = m.suffix().str();
   }
+
+  s = text;
+  while (std::regex_search(s, m, e)){
+    plainText += m.prefix().str();
+    s = m.suffix().str();
+  }
+  plainText += s;
+
+  //translate
+  std::future<std::string> translated_text_future = std::async(
+      std::launch::async, [&](){
+      auto translate_client_wrapper = _translate_client_pool->Pop();
+      if (!translate_client_wrapper) {
+        ServiceException se;
+        se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+        se.message = "Failed to connect to translate-service";
+        throw se;
+      }
+      std::string translated_text;
+      auto translate_client = translate_client_wrapper->GetClient();
+      try{
+        translate_client->Translate(translated_text, req_id, plainText, writer_text_map);
+      } catch (...) {
+        LOG(error) << "Failed to upload text to translate-service";
+        _translate_client_pool->Push(translate_client_wrapper);
+        throw;
+      }
+
+      _translate_client_pool->Push(translate_client_wrapper);
+      return translated_text;
+    });
 
   std::future<std::vector<std::string>> shortened_urls_future = std::async(
       std::launch::async, [&](){
@@ -148,6 +188,13 @@ void TextHandler::UploadText(
     updated_text = text;
   }
 
+  //TODO: add shortened urls to translated text
+  try {
+    updated_text = translated_text_future.get();
+  } catch (...) {
+    LOG(error) << "Failed to get translated text from translate-service";
+    throw;
+  }
   
   std::future<void> upload_text_future = std::async(
       std::launch::async, [&]() {

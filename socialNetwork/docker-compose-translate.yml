@@ -1,0 +1,15 @@
+version: "3"
+services:
+    text-service:
+        image: lyxtest
+        hostname: text-service
+        restart: "no"
+        entrypoint: TextService
+
+    translate-service:
+        image: lyx/social-network-microservices-translate:debug
+        runtime: nvidia
+        hostname: translate-service
+        restart: "no"
+        entrypoint: TranslateService
+
