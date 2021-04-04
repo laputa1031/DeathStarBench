@@ -1,0 +1,3 @@
+[submodule "socialNetwork/third_party/CTranslate2"]
+    path=socialNetwork/third_party/CTranslate2
+    url=git@github.com:laputa1031/CTranslate2.git
