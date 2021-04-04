@@ -68,6 +68,10 @@
     "addr": "media-service",
     "port": 9090
   },
+  "translate-service": {
+    "addr": "translate-service",
+    "port": 9090
+  },
   "user-mention-service": {
     "addr": "user-mention-service",
     "port": 9090
@@ -99,5 +103,6 @@
   "home-timeline-service": {
     "addr": "home-timeline-service",
     "port": 9090
-  }
+  },
+  "translate_model_dir": "/social-network-microservices/data/ende_ctranslate2"
 }

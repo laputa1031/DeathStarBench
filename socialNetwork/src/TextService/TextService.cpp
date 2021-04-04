@@ -36,6 +36,9 @@ int main(int argc, char *argv[]) {
     std::string user_mention_addr = config_json["user-mention-service"]["addr"];
     int user_mention_port = config_json["user-mention-service"]["port"];
 
+    std::string translate_addr = config_json["translate-service"]["addr"];
+    int translate_port = config_json["translate-service"]["port"];
+
     ClientPool<ThriftClient<ComposePostServiceClient>> compose_client_pool(
         "compose-post", compose_addr, compose_port, 0, 128, 1000);
 
@@ -46,12 +49,16 @@ int main(int argc, char *argv[]) {
         "user-mention-service", user_mention_addr,
         user_mention_port, 0, 128, 1000);
 
+    ClientPool<ThriftClient<TranslateServiceClient>> translate_client_pool(
+        "translate_service", translate_addr, translate_port, 0, 128, 1000);
+
     TThreadedServer server(
         std::make_shared<TextServiceProcessor>(
             std::make_shared<TextHandler>(
                 &compose_client_pool,
                 &url_client_pool,
-                &user_mention_pool)),
+                &user_mention_pool,
+                &translate_client_pool)),
         std::make_shared<TServerSocket>("0.0.0.0", port),
         std::make_shared<TFramedTransportFactory>(),
         std::make_shared<TBinaryProtocolFactory>()
