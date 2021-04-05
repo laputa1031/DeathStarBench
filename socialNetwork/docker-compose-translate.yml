@@ -188,12 +188,14 @@ services:
   text-service:
     image: lyxtest
     hostname: text-service
+    restart: always
     entrypoint: TextService
 
   translate-service:
     image: lyx/social-network-microservices-translate:latest
     runtime: nvidia
     hostname: translate-service
+    restart: always
     entrypoint: TranslateService
 
   unique-id-service:

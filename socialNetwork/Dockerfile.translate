@@ -1,4 +1,4 @@
-FROM lyx/thrift-microservice-translate-deps:latest
+FROM yxlee/social-network-microservices-translate-deps:latest
 
 ARG NUM_CPUS=40
 
