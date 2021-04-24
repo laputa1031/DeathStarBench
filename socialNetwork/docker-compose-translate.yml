@@ -186,13 +186,13 @@ services:
     restart: always
 
   text-service:
-    image: lyxtest
+    image: yxlee/social-network-microservices-translate:latest
     hostname: text-service
     restart: always
     entrypoint: TextService
 
   translate-service:
-    image: lyx/social-network-microservices-translate:latest
+    image: yxlee/social-network-microservices-translate:latest
     runtime: nvidia
     hostname: translate-service
     restart: always
@@ -255,7 +255,7 @@ services:
 #      - 5778:5778
       - 16686:16686
 #      - 14268:14268
-#      - 9411:9411
+      - 9411:9411
     restart: always
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411

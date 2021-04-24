@@ -1,6 +1,6 @@
-FROM yxlee/social-network-microservices-translate-deps:latest
+FROM yxlee/social-network-microservices-translate-deps:ubuntu18.04
 
-ARG NUM_CPUS=40
+ARG NUM_CPUS=8
 
 COPY ./ /social-network-microservices
 RUN cd /social-network-microservices \
