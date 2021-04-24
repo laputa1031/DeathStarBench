@@ -25,8 +25,6 @@
 
 namespace social_network {
 
-const int TRANSLATE_MAX_JOBS = 50;
-const int  TRANSLATE_MAX_WAIT_TIME = 100;
 
 std::vector<std::vector<std::string>> tokenize(const std::vector<std::string>& inputs, std::string delimiter) {
     std::vector<std::vector<std::string>> ret;
@@ -61,7 +59,7 @@ std::vector<std::string> tokenize(const std::string& str, std::string delimiter)
 
 class TranslateHandler : virtual public TranslateServiceIf {
  public:
-  TranslateHandler(ctranslate2::TranslatorPool*, ctranslate2::TranslationOptions*);
+  TranslateHandler(ctranslate2::TranslatorPool*, ctranslate2::TranslationOptions*, int, int);
   ~TranslateHandler();
 
   void Translate(std::string&, const int64_t, const std::string&, const std::map<std::string, std::string> &) override;
@@ -80,14 +78,19 @@ class TranslateHandler : virtual public TranslateServiceIf {
   std::queue<int64_t> _jobs;
   bool _req_end;
   int _fetch_available;
+
+  int _max_wait_time;
+  int _max_jobs;
 };
 
-TranslateHandler::TranslateHandler(ctranslate2::TranslatorPool* translator_pool, ctranslate2::TranslationOptions* options) {
+TranslateHandler::TranslateHandler(ctranslate2::TranslatorPool* translator_pool, ctranslate2::TranslationOptions* options, int max_wait_time = 50, int max_jobs = 20) {
     _translator_pool = translator_pool;
     _options = options;
     _processor = std::thread(&TranslateHandler::work_loop, this);
     _req_end = false;
     _fetch_available = 0;
+	_max_wait_time = max_wait_time;
+	_max_jobs = max_jobs;
 }
 
 TranslateHandler::~TranslateHandler() {
@@ -101,7 +104,7 @@ TranslateHandler::~TranslateHandler() {
 void TranslateHandler::work_loop() {
     while (true) {
         std::unique_lock<std::mutex> push_ul(_push_mutex);
-        _cv.wait_for(push_ul, std::chrono::milliseconds(TRANSLATE_MAX_WAIT_TIME), [this]{return _jobs.size() >= TRANSLATE_MAX_JOBS or _req_end;});
+        _cv.wait_for(push_ul, std::chrono::milliseconds(_max_wait_time), [this]{return _jobs.size() >= _max_jobs or _req_end;});
 
         if (_req_end)
             break;
@@ -109,8 +112,8 @@ void TranslateHandler::work_loop() {
         if (_jobs.size() == 0)
             continue;
         int count = 0;
-        std::vector<int64_t> reqs(std::min((int)_jobs.size(), TRANSLATE_MAX_JOBS));
-        while (!_jobs.empty() and count < TRANSLATE_MAX_JOBS) {
+        std::vector<int64_t> reqs(std::min((int)_jobs.size(), _max_jobs));
+        while (!_jobs.empty() and count < _max_jobs) {
             reqs[count] = _jobs.front();
             _jobs.pop();
             ++count;
@@ -129,7 +132,7 @@ void TranslateHandler::work_loop() {
         auto results = _translator_pool->translate_batch(batch, *_options);
         auto t2 = std::chrono::steady_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-        std::cout << "translation elapsed: " << time_span.count() << std::endl;
+        std::cout << "batch size:" << batch.size() << "\ttranslation elapsed:" << time_span.count() << "ms" << std::endl;
         
         fetch_ul.lock();
         for (int i = 0; i < reqs.size(); ++i) {
@@ -158,11 +161,13 @@ void TranslateHandler::Translate(
 
     //begin to translate
 
+    auto t1 = std::chrono::steady_clock::now();
     auto tokens = tokenize(text, " ");
+    auto t2 = std::chrono::steady_clock::now();
 
     std::unique_lock<std::mutex> push_ul(_push_mutex);
-    if (_jobs.size() >= TRANSLATE_MAX_JOBS)
-      _can_push.wait(push_ul, [this]{return _jobs.size() < 2 * TRANSLATE_MAX_JOBS;});
+    if (_jobs.size() >= _max_jobs)
+      _can_push.wait(push_ul, [this]{return _jobs.size() < 2 * _max_jobs;});
 
     _buffer[req_id] = tokens;
     _jobs.emplace(req_id);
@@ -176,6 +181,10 @@ void TranslateHandler::Translate(
     --_fetch_available;
     fetch_ul.unlock();
 
+    auto t3 = std::chrono::steady_clock::now();
+    auto time_span_tokenize = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    auto time_span_translate = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2);
+    std::cout << "req:" << req_id << "\ttokenize elapsed:" << time_span_tokenize.count() << "ms\ttranslation elapsed:" << time_span_translate.count() << "ms" << std::endl;
     _return.clear();
 
     for (const auto& token : translated) {

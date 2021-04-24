@@ -19,6 +19,13 @@ void sigintHandler (int sig) {
 }
 
 int main(int argc, char *argv[]) {
+	int max_wait_time = 50;
+	int max_jobs = 20;
+	if (argc == 3) {
+		max_wait_time = atoi(argv[1]);
+		max_jobs = atoi(argv[2]);
+	}
+
     signal(SIGINT, sigintHandler);
     init_logger();
     SetUpTracer("config/jaeger-config.yml", "translate-service");
@@ -28,7 +35,7 @@ int main(int argc, char *argv[]) {
         int port = config_json["translate-service"]["port"];
         std::string model_dir = config_json["translate_model_dir"];
         ctranslate2::TranslatorPool translator_pool(
-            16, 1, model_dir, ctranslate2::Device::CUDA, {0,1}, ctranslate2::ComputeType::FLOAT16);
+            16, 1, model_dir, ctranslate2::Device::CUDA, 0, ctranslate2::ComputeType::FLOAT16);
         ctranslate2::TranslationOptions options;
         options.max_batch_size = 50;
         options.beam_size = 1;
@@ -38,7 +45,9 @@ int main(int argc, char *argv[]) {
             std::make_shared<TranslateServiceProcessor>(
                 std::make_shared<TranslateHandler>(
                     &translator_pool,
-                    &options)),
+                    &options,
+					max_wait_time,
+					max_jobs)),
             std::make_shared<TServerSocket>("0.0.0.0", port),
             std::make_shared<TFramedTransportFactory>(),
             std::make_shared<TBinaryProtocolFactory>()
