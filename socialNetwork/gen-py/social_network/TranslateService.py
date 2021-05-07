@@ -19,11 +19,11 @@ all_structs = []
 
 
 class Iface(object):
-    def UploadUniqueId(self, req_id, post_type, carrier):
+    def Translate(self, req_id, text, carrier):
         """
         Parameters:
          - req_id
-         - post_type
+         - text
          - carrier
 
         """
@@ -37,28 +37,28 @@ class Client(Iface):
             self._oprot = oprot
         self._seqid = 0
 
-    def UploadUniqueId(self, req_id, post_type, carrier):
+    def Translate(self, req_id, text, carrier):
         """
         Parameters:
          - req_id
-         - post_type
+         - text
          - carrier
 
         """
-        self.send_UploadUniqueId(req_id, post_type, carrier)
-        self.recv_UploadUniqueId()
+        self.send_Translate(req_id, text, carrier)
+        return self.recv_Translate()
 
-    def send_UploadUniqueId(self, req_id, post_type, carrier):
-        self._oprot.writeMessageBegin('UploadUniqueId', TMessageType.CALL, self._seqid)
-        args = UploadUniqueId_args()
+    def send_Translate(self, req_id, text, carrier):
+        self._oprot.writeMessageBegin('Translate', TMessageType.CALL, self._seqid)
+        args = Translate_args()
         args.req_id = req_id
-        args.post_type = post_type
+        args.text = text
         args.carrier = carrier
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
 
-    def recv_UploadUniqueId(self):
+    def recv_Translate(self):
         iprot = self._iprot
         (fname, mtype, rseqid) = iprot.readMessageBegin()
         if mtype == TMessageType.EXCEPTION:
@@ -66,19 +66,21 @@ class Client(Iface):
             x.read(iprot)
             iprot.readMessageEnd()
             raise x
-        result = UploadUniqueId_result()
+        result = Translate_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "Translate failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
     def __init__(self, handler):
         self._handler = handler
         self._processMap = {}
-        self._processMap["UploadUniqueId"] = Processor.process_UploadUniqueId
+        self._processMap["Translate"] = Processor.process_Translate
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -101,13 +103,13 @@ class Processor(Iface, TProcessor):
             self._processMap[name](self, seqid, iprot, oprot)
         return True
 
-    def process_UploadUniqueId(self, seqid, iprot, oprot):
-        args = UploadUniqueId_args()
+    def process_Translate(self, seqid, iprot, oprot):
+        args = Translate_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = UploadUniqueId_result()
+        result = Translate_result()
         try:
-            self._handler.UploadUniqueId(args.req_id, args.post_type, args.carrier)
+            result.success = self._handler.Translate(args.req_id, args.text, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -122,7 +124,7 @@ class Processor(Iface, TProcessor):
             logging.exception('Unexpected exception in handler')
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("UploadUniqueId", msg_type, seqid)
+        oprot.writeMessageBegin("Translate", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -130,19 +132,19 @@ class Processor(Iface, TProcessor):
 # HELPER FUNCTIONS AND STRUCTURES
 
 
-class UploadUniqueId_args(object):
+class Translate_args(object):
     """
     Attributes:
      - req_id
-     - post_type
+     - text
      - carrier
 
     """
 
 
-    def __init__(self, req_id=None, post_type=None, carrier=None,):
+    def __init__(self, req_id=None, text=None, carrier=None,):
         self.req_id = req_id
-        self.post_type = post_type
+        self.text = text
         self.carrier = carrier
 
     def read(self, iprot):
@@ -160,18 +162,18 @@ class UploadUniqueId_args(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
-                if ftype == TType.I32:
-                    self.post_type = iprot.readI32()
+                if ftype == TType.STRING:
+                    self.text = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype22, _vtype23, _size21) = iprot.readMapBegin()
-                    for _i25 in range(_size21):
-                        _key26 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val27 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key26] = _val27
+                    (_ktype40, _vtype41, _size39) = iprot.readMapBegin()
+                    for _i43 in range(_size39):
+                        _key44 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val45 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key44] = _val45
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -184,21 +186,21 @@ class UploadUniqueId_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('UploadUniqueId_args')
+        oprot.writeStructBegin('Translate_args')
         if self.req_id is not None:
             oprot.writeFieldBegin('req_id', TType.I64, 1)
             oprot.writeI64(self.req_id)
             oprot.writeFieldEnd()
-        if self.post_type is not None:
-            oprot.writeFieldBegin('post_type', TType.I32, 2)
-            oprot.writeI32(self.post_type)
+        if self.text is not None:
+            oprot.writeFieldBegin('text', TType.STRING, 2)
+            oprot.writeString(self.text.encode('utf-8') if sys.version_info[0] == 2 else self.text)
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter28, viter29 in self.carrier.items():
-                oprot.writeString(kiter28.encode('utf-8') if sys.version_info[0] == 2 else kiter28)
-                oprot.writeString(viter29.encode('utf-8') if sys.version_info[0] == 2 else viter29)
+            for kiter46, viter47 in self.carrier.items():
+                oprot.writeString(kiter46.encode('utf-8') if sys.version_info[0] == 2 else kiter46)
+                oprot.writeString(viter47.encode('utf-8') if sys.version_info[0] == 2 else viter47)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -217,24 +219,26 @@ class UploadUniqueId_args(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(UploadUniqueId_args)
-UploadUniqueId_args.thrift_spec = (
+all_structs.append(Translate_args)
+Translate_args.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'req_id', None, None, ),  # 1
-    (2, TType.I32, 'post_type', None, None, ),  # 2
+    (2, TType.STRING, 'text', 'UTF8', None, ),  # 2
     (3, TType.MAP, 'carrier', (TType.STRING, 'UTF8', TType.STRING, 'UTF8', False), None, ),  # 3
 )
 
 
-class UploadUniqueId_result(object):
+class Translate_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -246,7 +250,12 @@ class UploadUniqueId_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRING:
+                    self.success = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException.read(iprot)
                 else:
@@ -260,7 +269,11 @@ class UploadUniqueId_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('UploadUniqueId_result')
+        oprot.writeStructBegin('Translate_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRING, 0)
+            oprot.writeString(self.success.encode('utf-8') if sys.version_info[0] == 2 else self.success)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -281,9 +294,9 @@ class UploadUniqueId_result(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(UploadUniqueId_result)
-UploadUniqueId_result.thrift_spec = (
-    None,  # 0
+all_structs.append(Translate_result)
+Translate_result.thrift_spec = (
+    (0, TType.STRING, 'success', 'UTF8', None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

@@ -16,7 +16,7 @@ else:
 from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
 
-from social_network import TextService
+from social_network import TranslateService
 from social_network.ttypes import *
 
 if len(sys.argv) <= 1 or sys.argv[1] == '--help':
@@ -24,7 +24,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
     print('')
     print('Functions:')
-    print('  void UploadText(i64 req_id, string text,  carrier)')
+    print('  string Translate(i64 req_id, string text,  carrier)')
     print('')
     sys.exit(0)
 
@@ -101,14 +101,14 @@ else:
     else:
         transport = TTransport.TBufferedTransport(socket)
 protocol = TBinaryProtocol(transport)
-client = TextService.Client(protocol)
+client = TranslateService.Client(protocol)
 transport.open()
 
-if cmd == 'UploadText':
+if cmd == 'Translate':
     if len(args) != 3:
-        print('UploadText requires 3 args')
+        print('Translate requires 3 args')
         sys.exit(1)
-    pp.pprint(client.UploadText(eval(args[0]), args[1], eval(args[2]),))
+    pp.pprint(client.Translate(eval(args[0]), args[1], eval(args[2]),))
 
 else:
     print('Unrecognized method %s' % cmd)

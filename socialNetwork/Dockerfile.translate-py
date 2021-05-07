@@ -1,0 +1,7 @@
+FROM yxlee/social-network-microservices-translate-deps-py:latest
+
+COPY ./ /social-network-microservices
+
+WORKDIR /social-network-microservices
+
+ENTRYPOINT ["python3", "src/TranslateService/TranslateService.py", "16", "0.05"]

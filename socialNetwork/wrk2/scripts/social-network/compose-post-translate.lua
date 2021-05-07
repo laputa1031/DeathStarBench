@@ -30,7 +30,8 @@ request = function()
   local user_index = math.random(1, 962)
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
-  local text = stringRandom(256)
+  --local text = stringRandom(256)
+  local text = "▁I ▁declare ▁resumed ▁the ▁session ▁of ▁the ▁European ▁Parliament ▁adjourn ed ▁on ▁Friday ▁17 ▁December ▁1999 , ▁and ▁I ▁wou    ld ▁like ▁once ▁again ▁to ▁wish ▁you ▁a ▁happy ▁new ▁year ▁in ▁the ▁hope ▁that ▁you ▁enjoyed ▁a ▁pleasant ▁fest ive ▁period ."
   local num_user_mentions = math.random(0, 5)
   local num_urls = math.random(0, 5)
   local num_media = math.random(0, 4)
@@ -66,6 +67,7 @@ request = function()
   local headers = {}
   local body
   headers["Content-Type"] = "application/x-www-form-urlencoded"
+  --headers["Connection"] = "Close"
   if num_media then
     body   = "username=" .. username .. "&user_id=" .. user_id ..
         "&text=" .. text .. "&media_ids=" .. media_ids ..

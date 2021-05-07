@@ -1,0 +1,15 @@
+ARG UBUNTU_VERSION=18.04
+ARG CUDA_VERSION=11.2.0
+
+FROM nvidia/cuda:${CUDA_VERSION}-base-ubuntu${UBUNTU_VERSION}
+
+RUN echo "45.43.38.238 developer.download.nvidia.cn" >> /etc/hosts && \
+    echo "45.43.38.238 developer.download.nvidia.com" >> /etc/hosts && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3-distutils wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    wget -nv https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py && \
+    python3 -m pip --no-cache-dir install thrift ctranslate2 pyonmttok service_streamer jaeger-client pyyaml&& \
+    rm get-pip.py

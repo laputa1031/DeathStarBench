@@ -1,0 +1,11 @@
+{
+    "local_agent": {
+        "reporting_host": "jaeger",
+        "reporting_Port": "6831"
+    },
+    "sampler": {
+        "type": "const",
+        "param": 1
+    },
+    "logging": true
+}

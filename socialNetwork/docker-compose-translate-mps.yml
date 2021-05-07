@@ -1,8 +1,7 @@
 version: "3"
 services:
-
-  # Resolving container hostnames from host machine
-  # CAUTION: could affect host machine networking
+# Resolving container hostnames from host machine
+# CAUTION: could affect host machine networking
 #  dns-social-network:
 #    image: defreitas/dns-proxy-server
 #    volumes:
@@ -192,14 +191,22 @@ services:
     entrypoint: TextService
 
   translate-service:
-    image: yxlee/social-network-microservices-translate-py:test
+#    depends_on:
+#     - mps-daemon
+    image: yxlee/social-network-microservices-translate-py:dev
     hostname: translate-service
     runtime: nvidia
+    ipc: container:mps-daemon
+    environment:
+      - "NVIDIA_VISIBLE_DEVICES"
+      - "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=100"
 #    ports:
 #      - 127.0.0.1:9099:9090
     restart: always
     entrypoint: ["python3", "src/TranslateService/TranslateService.py", "100", "0.1"]
-    #entrypoint: ["TranslateService", "50", "100"]
+    scale: 1
+    volumes:
+      - nvidia_mps:/tmp/nvidia-mps
 
   unique-id-service:
     image: yg397/social-network-microservices
@@ -262,3 +269,8 @@ services:
     restart: always
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+volumes:
+  nvidia_mps:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
